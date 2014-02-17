@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project>
+    <gatt in="eguchi-beacon-gatt.xml" />
+    <hardware in="eguchi-beacon-hardware.xml" /> 
+    <script in="eguchi-beacon.bgs" />
+    <image out="eguchi-beacon.hex" />  
+    <device type="ble112" />  
+</project>

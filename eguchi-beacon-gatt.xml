@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+	<service uuid="9D9AD8D3-5940-479B-A6BA-EA85474ABAEE" advertise="true">
+        <description>Beacon</description>
+
+        <characteristic uuid="F7BBC353-CDC2-40A2-B422-5442413DA8BA" id="xgatt_major">
+            <properties read="true" write="true"/>
+            <value type="user" />
+        </characteristic>
+
+        <characteristic uuid="4814DACE-D2DC-4209-9F1D-7A880B6026C0" id="xgatt_minor">
+            <properties read="true" write="true"/>
+            <value type="user" />
+        </characteristic>
+
+        <characteristic uuid="4FD5BB8D-9974-47BE-91D3-9CA4171750D8" id="xgatt_uuid">
+            <properties read="true" write="true"/>
+            <value type="user" />
+        </characteristic>
+
+		</service>
+</configuration>

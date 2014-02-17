@@ -1,0 +1,183 @@
+# eguchi-beacon Firmware
+# Programed by Kazuyuki Eguchi
+# Copyright(c) Kazuyuki Eguchi
+
+dim custom_adv_data(30)
+dim custom_sr_data(8)
+dim bmajor(2)
+dim bminor(2)
+dim buuid(16)
+dim len
+dim res
+
+event system_boot(major, minor, patch, build, ll_version, protocol, hw)	
+	
+	len = 2
+	call flash_ps_load($8000)(res,len,bmajor(0:2))
+
+	len = 2
+	call flash_ps_load($8001)(res,len,bminor(0:2))
+
+	len = 16
+	call flash_ps_load($8002)(res,len,buuid(0:16))
+
+	# Generic Access Profile 設定
+
+	# Set Adv Perameters
+	# adv interval min (単位は625us)
+	# adv interval max (単位は625us)
+	# adv chennels 0x04 only 37 chaneel , 0x03 37 and 38 channel , 0x07 Three channel
+    call gap_set_adv_parameters(800, 800, 7)
+		
+	# Set Mode
+	# GAP Discoverable Mode ( gap_non_discoverable, gap_limited_discoverable, gap_general_discoverable, gap_broadcast, gap_user_data)
+	# GAP Connectable Mode ( gap_non_connectable , gap_directed_connectable , gap_undirected_connectable, gap_scannable_connectable)
+	call gap_set_mode(gap_user_data, gap_undirected_connectable)
+	
+	# Flags
+	custom_adv_data( 0:1) = $02
+	custom_adv_data( 1:1) = $01
+	custom_adv_data( 2:1) = $06
+	
+	# Manufacturer data
+	custom_adv_data( 3:1) = $1a
+	custom_adv_data( 4:1) = $ff
+	
+	# Preamble - Apple Company Identifier - data type, 0x02 - data length, 0x15 = 21
+	custom_adv_data( 5:1) = $4c
+	custom_adv_data( 6:1) = $00
+	custom_adv_data( 7:1) = $02
+	custom_adv_data( 8:1) = $15
+	
+	custom_adv_data( 9:16) = buuid(0:16)
+
+	#Major
+	custom_adv_data(25:2) = bmajor(0:2)
+
+	#Minor
+	custom_adv_data(27:2) = bminor(0:2)
+
+	# Measured power at 1 meter (specified in 2's complement, so 0xC6 is -58)
+	custom_adv_data(29:1) = $c6
+
+	# Set advertisement data
+	# set scanrsp 0: advertisement data, 1:scan response data
+	# adv data length
+	# adv data data
+	call gap_set_adv_data(0, 30, custom_adv_data(0:30))
+	
+	# Local Name 
+	custom_sr_data( 0:1) = $07 # Length of this Data
+	custom_sr_data( 1:1) = $09 # AD Type = Complete Local Name
+	custom_sr_data( 2:1) = $65 # e
+	custom_sr_data( 3:1) = $67 # g
+	custom_sr_data( 4:1) = $75 # u
+	custom_sr_data( 5:1) = $63 # c
+	custom_sr_data( 6:1) = $68 # h
+	custom_sr_data( 7:1) = $69 # i
+
+	# Set advertisement data
+	# set scanrsp 0: advertisement data, 1:scan response data
+	# adv data length
+	# adv data data
+	call gap_set_adv_data(1, 8, custom_sr_data(0:8))
+	
+end
+
+# Read 
+event attributes_user_read_request(connection, handle, offset, maxsize)
+	if handle = xgatt_major then
+		call attributes_user_read_response(connection, 0, 2,bmajor(0:2))
+	end if
+	
+	if handle = xgatt_minor then
+		call attributes_user_read_response(connection, 0, 2,bminor(0:2))
+	end if
+
+	if handle = xgatt_uuid then
+		call attributes_user_read_response(connection, 0, 16,buuid(0:16))
+	end if
+
+end
+
+# write
+event attributes_value(connection, reason, handle, offset, value_len,value_data)
+	
+	if handle = xgatt_major then
+	
+		if value_len = 2 then
+			bmajor(0:2) = value_data(0:2)
+		end if
+		
+		if value_len = 1 then
+			bmajor(0:1) = $00
+			bmajor(1:1) = value_data(0:1)
+		end if
+		
+		len = 2
+		call flash_ps_save($8000,len,bmajor(0:len))
+		
+		#Minor
+		custom_adv_data(25:2) = bmajor(0:2)
+
+		# Set advertisement data
+		# set scanrsp 0: advertisement data, 1:scan response data
+		# adv data length
+		# adv data data
+		call gap_set_adv_data(0, 30, custom_adv_data(0:30))
+
+	end if
+	
+	if handle = xgatt_minor then
+	
+		if value_len = 2 then
+			bminor(0:2) = value_data(0:2)
+		end if
+		
+		if value_len = 1 then
+			bminor(0:1) = $00
+			bminor(1:1) = value_data(0:1)
+		end if
+		
+		len = 2
+		call flash_ps_save($8001,len,bminor(0:len))
+		
+		#Major
+		custom_adv_data(27:2) = bminor(0:2)
+
+		# Set advertisement data
+		# set scanrsp 0: advertisement data, 1:scan response data
+		# adv data length
+		# adv data data
+		call gap_set_adv_data(0, 30, custom_adv_data(0:30))
+	
+	end if
+	
+	if handle = xgatt_uuid then
+		if value_len = 16 then
+			buuid(0:16) = value_data(0:16) 
+
+			len = 16
+			call flash_ps_save($8002,len,buuid(0:len))
+			
+			custom_adv_data( 9:16) = buuid(0:16)
+
+			# Set advertisement data
+			# set scanrsp 0: advertisement data, 1:scan response data
+			# adv data length
+			# adv data data
+			call gap_set_adv_data(0, 30, custom_adv_data(0:30))
+		end if
+	end if
+	
+	call attributes_user_write_response(connection, 0)
+end
+
+event connection_disconnected(handle, result)
+	# 接続が切断された場合は再度、advertisement再開する
+	# Set Mode
+	# GAP Discoverable Mode ( gap_non_discoverable, gap_limited_discoverable, gap_general_discoverable, gap_broadcast, gap_user_data)
+	# GAP Connectable Mode ( gap_non_connectable , gap_directed_connectable , gap_undirected_connectable, gap_scannable_connectable)
+	call gap_set_mode(gap_user_data, gap_undirected_connectable)
+end
+
